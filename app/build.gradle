@@ -1,0 +1,87 @@
+plugins {
+    id 'application'
+}
+
+sourceCompatibility = "11"
+targetCompatibility = "11"
+
+repositories {
+    jcenter()
+    mavenCentral()
+}
+
+configurations {
+    jaxb
+}
+
+dependencies {
+    implementation 'com.google.guava:guava:29.0-jre'
+    
+    implementation 'jakarta.xml.bind:jakarta.xml.bind-api:2.3.3'
+    implementation 'com.sun.xml.bind:jaxb-core:2.3.0.1'
+    implementation 'com.sun.xml.bind:jaxb-impl:2.3.3'
+   
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.6.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    
+    jaxb (
+        'com.sun.xml.bind:jaxb-xjc:2.3.3',
+        'jakarta.xml.bind:jakarta.xml.bind-api:2.3.3',
+        'com.sun.xml.bind:jaxb-core:2.3.0.1',
+        'com.sun.xml.bind:jaxb-impl:2.3.3',
+        'com.sun.activation:jakarta.activation:1.2.2'
+    )
+}
+
+def generatedXjcSources = "$buildDir/xjc/java"
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java',"$generatedXjcSources"]
+        }
+    }
+    test {
+        java {
+            srcDirs = ['src/test/java']
+        }
+    }
+}
+
+task jaxb {
+    System.setProperty('javax.xml.accessExternalSchema', 'all')
+    inputs.files fileTree(dir: 'src/main/xsd', include: ['*.xsd'])
+    inputs.files fileTree(dir: 'src/main/xjb', include: ['*.xjb'])
+    outputs.files fileTree(dir: "$generatedXjcSources")
+    
+    doLast {
+        mkdir "$generatedXjcSources"
+
+        ant.taskdef(
+            name: 'xjc',
+            classname: 'com.sun.tools.xjc.XJCTask',
+            classpath: configurations.jaxb.asPath
+        )
+
+        ant.xjc(
+            destdir: "$generatedXjcSources",
+            language: 'XMLSCHEMA',
+            extension: true,
+            catalog: "src/main/xsd/catalog.xml"
+        ) {
+            schema(dir: "src/main/xsd", includes: "eCH-0132-2-0.xsd")
+            binding(dir: "src/main/xjb", includes: "binding.xjb")
+            arg(value: '-verbose')
+        }
+    }
+}
+compileJava.dependsOn jaxb
+
+
+application {
+    mainClass = 'ech0132.write.App'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
