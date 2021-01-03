@@ -39,6 +39,8 @@ public class App {
             delivery.setNewInsuranceobject(newInsuranceObject);
             
             
+            
+            
             OutputStream os = new FileOutputStream("/Users/stefan/tmp/fubar-ech-0132.xml");
             marshaller.marshal( delivery, os );
             
